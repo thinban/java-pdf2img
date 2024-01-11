@@ -2,6 +2,10 @@ package com.example.javapdf2img;
 
 import com.spire.pdf.PdfDocument;
 import com.spire.pdf.PdfPageBase;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -21,6 +25,9 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -148,6 +155,29 @@ public class JavaPdf2imgApplication {
         }
     }
 
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    static class SaveImgJob implements Runnable {
+        BufferedImage bim;
+        File outputfile;
+        CountDownLatch latch;
+
+        @Override
+        public void run() {
+            try {
+                log.info("图片已创建 -> " + outputfile.getName());
+                ImageIO.write(bim, "png", outputfile);
+                latch.countDown();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static ExecutorService executor = Executors.newFixedThreadPool(10);
+
     @PostMapping("pdf2ImgV2")
     public Object pdf2ImgV2(@RequestParam MultipartFile file) {
         try {
@@ -164,14 +194,21 @@ public class JavaPdf2imgApplication {
             }
 
             log.info("图片复制到文件夹: " + destinationFile.getName());
+
+
             try (PDDocument document = Loader.loadPDF(file.getBytes())) {
                 PDFRenderer pdfRenderer = new PDFRenderer(document);
+
+                CountDownLatch latch = new CountDownLatch(document.getNumberOfPages());
                 for (int page = 0; page < document.getNumberOfPages(); ++page) {
                     BufferedImage bim = pdfRenderer.renderImage(page);
-                    File outputfile = new File(destinationDir + "/image_" + (page + 1) + ".png");
-                    log.info("图片已创建 -> " + outputfile.getName());
-                    ImageIO.write(bim, "png", outputfile);
+                    File outputfile = new File(destinationDir + "/" + fnNoExt + "_" + (page + 1) + ".png");
+                    // 提交I/O任务到线程池
+                    executor.submit(SaveImgJob.builder().bim(bim).outputfile(outputfile).latch(latch).build());
                 }
+                // 等待所有I/O任务完成
+                latch.await();
+
                 log.info("转换后的图片保存在 -> " + destinationFile.getAbsolutePath());
 
                 // 执行完毕后将临时目录打包成zip文件
@@ -186,11 +223,9 @@ public class JavaPdf2imgApplication {
 
                 byte[] zipBytes = baos.toByteArray();
                 HttpHeaders headers = new HttpHeaders();
-//                zipFilePath = new String(zipFilePath.getBytes("UTF-8"), "iso-8859-1");
                 headers.add("Content-Disposition", "attachment; filename=" + zipFilePath);
                 return ResponseEntity.ok().headers(headers).body(zipBytes);
             } catch (IOException e) {
-                e.printStackTrace();
                 return ResponseEntity.status(500).body("服务不可用: " + e.getMessage());
             }
         } catch (Exception e) {
