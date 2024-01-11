@@ -1,7 +1,8 @@
 version: '3'
 services:
   springboot-app:
-    build: .
+    #docker build -t pdf2img:latest .
+    image: pdf2img:latest 
     ports:
       - "8080:8080"
     labels:
