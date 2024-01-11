@@ -38,13 +38,7 @@
             <version>5.1.0</version>
         </dependency>
     </dependencies>
-    <repositories>
-        <repository>
-            <id>com.e-iceblue</id>
-            <name>e-iceblue</name>
-            <url>https://repo.e-iceblue.cn/repository/maven-public/</url>
-        </repository>
-    </repositories>
+
     <build>
         <finalName>java-pdf2img</finalName>
         <plugins>
@@ -62,5 +56,47 @@
             </plugin>
         </plugins>
     </build>
+
+    <repositories>
+        <repository>
+            <id>com.e-iceblue</id>
+            <name>e-iceblue</name>
+            <url>https://repo.e-iceblue.cn/repository/maven-public/</url>
+        </repository>
+        <repository>
+            <id>tencent</id>
+            <name>Tencent Maven Repository</name>
+            <url>https://mirrors.cloud.tencent.com/repository/maven/</url>
+        </repository>
+        <!--        <repository>-->
+        <!--            <id>public</id>-->
+        <!--            <name>aliyun nexus</name>-->
+        <!--            <url>http://maven.aliyun.com/nexus/content/groups/public/</url>-->
+        <!--            <releases>-->
+        <!--                <enabled>true</enabled>-->
+        <!--            </releases>-->
+        <!--        </repository>-->
+    </repositories>
+
+    <pluginRepositories>
+        <!-- 添加腾讯 Maven 插件镜像 -->
+        <pluginRepository>
+            <id>tencent</id>
+            <name>Tencent Maven Plugin Repository</name>
+            <url>https://mirrors.cloud.tencent.com/repository/maven-plugin/</url>
+        </pluginRepository>
+        <!--阿里云-->
+        <!--        <pluginRepository>-->
+        <!--            <id>public</id>-->
+        <!--            <name>aliyun nexus</name>-->
+        <!--            <url>http://maven.aliyun.com/nexus/content/groups/public/</url>-->
+        <!--            <releases>-->
+        <!--                <enabled>true</enabled>-->
+        <!--            </releases>-->
+        <!--            <snapshots>-->
+        <!--                <enabled>false</enabled>-->
+        <!--            </snapshots>-->
+        <!--        </pluginRepository>-->
+    </pluginRepositories>
 
 </project>
