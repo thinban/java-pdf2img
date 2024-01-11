@@ -91,13 +91,13 @@ public class JavaPdf2imgApplication {
     public Object pdf2Img(@RequestParam MultipartFile file) {
         try {
             String fn = file.getOriginalFilename();
-            fn = fn.replaceAll(".pdf", "_");
+            String fnNoExt = fn.replaceAll(".pdf", "_");
             long now = System.currentTimeMillis();
 
             PdfDocument pdf = new PdfDocument();
             pdf.loadFromStream(file.getInputStream());
 
-            String zipFilePath = fn + now + ".zip";
+            String zipFilePath = fnNoExt + now + ".zip";
             log.info("pdf2Img加载pdf:{},期望输出:{}", fn, zipFilePath);
 
             String tempDirPath = null;
@@ -110,7 +110,7 @@ public class JavaPdf2imgApplication {
                 if (page.extractImages() != null) {
 
                     if (StringUtils.isEmpty(tempDirPath)) {
-                        tempDirPath = Files.createTempDirectory(fn + now).toString();
+                        tempDirPath = Files.createTempDirectory(fnNoExt + now).toString();
                     }
 
                     for (BufferedImage image : page.extractImages()) {
