@@ -1,0 +1,17 @@
+version: '3'
+services:
+  springboot-app:
+    build: .
+    ports:
+      - "8080:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.pdf2img.entrypoints=http"
+      - "traefik.http.routers.pdf2img.rule=Host(`pdf2img.thinban.top`)"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
