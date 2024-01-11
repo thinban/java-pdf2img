@@ -68,6 +68,34 @@ public class JavaPdf2imgApplication {
     }
 
     /**
+     * 临时目录打包成zip，并导出文件
+     *
+     * @param destinationDir
+     * @param zipFilePath
+     * @return
+     */
+    public ResponseEntity renderZip(String destinationDir, String zipFilePath) {
+        try {
+            // 执行完毕后将临时目录打包成zip文件
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ZipOutputStream zos = new ZipOutputStream(baos);
+            zip(new File(destinationDir), zipFilePath, zos);
+            zos.close();
+            baos.close();
+
+            // 自动删除临时目录
+            deleteTempDir(destinationDir);
+
+            byte[] zipBytes = baos.toByteArray();
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Content-Disposition", "attachment; filename=" + zipFilePath);
+            return ResponseEntity.ok().headers(headers).body(zipBytes);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
      * 递归删除临时目录
      *
      * @param tempDirPath
@@ -92,7 +120,7 @@ public class JavaPdf2imgApplication {
 
 
     /**
-     * pdf2Img
+     * 提取PDF中的图片
      *
      * @param file pdf文件
      * @return 转化后的图片.zip
@@ -136,20 +164,8 @@ public class JavaPdf2imgApplication {
             }
             log.info("pdf2Img提取图片完成: {},临时目录:{}", fn, tempDirPath);
 
-            // 执行完毕后将临时目录打包成zip文件
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ZipOutputStream zos = new ZipOutputStream(baos);
-            zip(new File(tempDirPath), zipFilePath, zos);
-            zos.close();
-            baos.close();
+            return renderZip(tempDirPath, zipFilePath);
 
-            // 自动删除临时目录
-            deleteTempDir(tempDirPath);
-
-            byte[] zipBytes = baos.toByteArray();
-            HttpHeaders headers = new HttpHeaders();
-            headers.add("Content-Disposition", "attachment; filename=" + zipFilePath);
-            return ResponseEntity.ok().headers(headers).body(zipBytes);
         } catch (IOException e) {
             return ResponseEntity.status(500).body("服务不可用: " + e.getMessage());
         }
@@ -178,6 +194,12 @@ public class JavaPdf2imgApplication {
 
     public static ExecutorService executor = Executors.newFixedThreadPool(10);
 
+    /**
+     * PDF按页转成图片
+     *
+     * @param file
+     * @return
+     */
     @PostMapping("pdf2ImgV2")
     public Object pdf2ImgV2(@RequestParam MultipartFile file) {
         try {
@@ -210,21 +232,8 @@ public class JavaPdf2imgApplication {
                 latch.await();
 
                 log.info("转换后的图片保存在 -> " + destinationFile.getAbsolutePath());
+                return renderZip(destinationDir, zipFilePath);
 
-                // 执行完毕后将临时目录打包成zip文件
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ZipOutputStream zos = new ZipOutputStream(baos);
-                zip(new File(destinationDir), zipFilePath, zos);
-                zos.close();
-                baos.close();
-
-                // 自动删除临时目录
-                deleteTempDir(destinationDir);
-
-                byte[] zipBytes = baos.toByteArray();
-                HttpHeaders headers = new HttpHeaders();
-                headers.add("Content-Disposition", "attachment; filename=" + zipFilePath);
-                return ResponseEntity.ok().headers(headers).body(zipBytes);
             } catch (IOException e) {
                 return ResponseEntity.status(500).body("服务不可用: " + e.getMessage());
             }
@@ -232,4 +241,6 @@ public class JavaPdf2imgApplication {
             return ResponseEntity.status(500).body("服务不可用: " + e.getMessage());
         }
     }
+
+
 }
