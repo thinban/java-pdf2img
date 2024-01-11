@@ -3,6 +3,9 @@ package com.example.javapdf2img;
 import com.spire.pdf.PdfDocument;
 import com.spire.pdf.PdfPageBase;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -115,7 +118,7 @@ public class JavaPdf2imgApplication {
 
                     for (BufferedImage image : page.extractImages()) {
                         //指定输出图片名称
-                        File output = new File(tempDirPath + "/" + String.format("fn_%d.png", index++));
+                        File output = new File(tempDirPath + "/" + String.format("%s_%d.png", fnNoExt, index++));
                         //将图片保存为PNG格式文件
                         ImageIO.write(image, "PNG", output);
                     }
@@ -141,6 +144,56 @@ public class JavaPdf2imgApplication {
             headers.add("Content-Disposition", "attachment; filename=" + zipFilePath);
             return ResponseEntity.ok().headers(headers).body(zipBytes);
         } catch (IOException e) {
+            return ResponseEntity.status(500).body("服务不可用: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("pdf2ImgV2")
+    public Object pdf2ImgV2(@RequestParam MultipartFile file) {
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String fnNoExt = originalFilename.replaceAll(".pdf", "_");
+            long now = System.currentTimeMillis();
+            String destinationDir = Files.createTempDirectory(fnNoExt + now).toString();
+            String zipFilePath = fnNoExt + now + ".zip";
+
+            File destinationFile = new File(destinationDir);
+            if (!destinationFile.exists()) {
+                destinationFile.mkdir();
+                log.info("文件夹已创建 -> " + destinationFile.getAbsolutePath());
+            }
+
+            log.info("图片复制到文件夹: " + destinationFile.getName());
+            try (PDDocument document = Loader.loadPDF(file.getBytes())) {
+                PDFRenderer pdfRenderer = new PDFRenderer(document);
+                for (int page = 0; page < document.getNumberOfPages(); ++page) {
+                    BufferedImage bim = pdfRenderer.renderImage(page);
+                    File outputfile = new File(destinationDir + "/image_" + (page + 1) + ".png");
+                    log.info("图片已创建 -> " + outputfile.getName());
+                    ImageIO.write(bim, "png", outputfile);
+                }
+                log.info("转换后的图片保存在 -> " + destinationFile.getAbsolutePath());
+
+                // 执行完毕后将临时目录打包成zip文件
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ZipOutputStream zos = new ZipOutputStream(baos);
+                zip(new File(destinationDir), zipFilePath, zos);
+                zos.close();
+                baos.close();
+
+                // 自动删除临时目录
+                deleteTempDir(destinationDir);
+
+                byte[] zipBytes = baos.toByteArray();
+                HttpHeaders headers = new HttpHeaders();
+//                zipFilePath = new String(zipFilePath.getBytes("UTF-8"), "iso-8859-1");
+                headers.add("Content-Disposition", "attachment; filename=" + zipFilePath);
+                return ResponseEntity.ok().headers(headers).body(zipBytes);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return ResponseEntity.status(500).body("服务不可用: " + e.getMessage());
+            }
+        } catch (Exception e) {
             return ResponseEntity.status(500).body("服务不可用: " + e.getMessage());
         }
     }
