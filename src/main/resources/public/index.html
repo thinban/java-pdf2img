@@ -62,6 +62,12 @@
                 link.href = window.URL.createObjectURL(blob);
                 link.download = filename || 'file.zip';
                 link.click();
+            } else {
+                var reader = new FileReader();
+                reader.onload = function () {
+                    alert(reader.result)
+                };
+                reader.readAsText(this.response);
             }
         };
 

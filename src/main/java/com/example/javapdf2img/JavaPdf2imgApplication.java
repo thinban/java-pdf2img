@@ -88,7 +88,7 @@ public class JavaPdf2imgApplication {
      * @return 转化后的图片.zip
      */
     @PostMapping("pdf2Img")
-    public ResponseEntity<byte[]> pdf2Img(@RequestParam MultipartFile file) {
+    public Object pdf2Img(@RequestParam MultipartFile file) {
         try {
             String fn = file.getOriginalFilename();
             fn = fn.replaceAll(".pdf", "_");
@@ -121,6 +121,7 @@ public class JavaPdf2imgApplication {
                     }
                 } else {
                     log.info("{} 未发现图片。", fn);
+                    return ResponseEntity.status(500).body(fn + "未检测到图片");
                 }
             }
             log.info("pdf2Img提取图片完成: {},临时目录:{}", fn, tempDirPath);
@@ -140,7 +141,7 @@ public class JavaPdf2imgApplication {
             headers.add("Content-Disposition", "attachment; filename=" + zipFilePath);
             return ResponseEntity.ok().headers(headers).body(zipBytes);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            return ResponseEntity.status(500).body("服务不可用: " + e.getMessage());
         }
     }
 }
