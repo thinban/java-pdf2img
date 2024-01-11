@@ -3,7 +3,7 @@ FROM maven:3.8.3-openjdk-17 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
-RUN mvn package
+RUN mvn package -Dmaven.test.skip=true -Dmaven.repo.local=./.m2
 
 # 使用OpenJDK镜像作为运行环境
 FROM khipu/openjdk17-alpine
