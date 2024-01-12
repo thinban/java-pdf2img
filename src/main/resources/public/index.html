@@ -32,20 +32,39 @@
 </head>
 <body>
 <input type="file" id="pdfFile" accept=".pdf">
-<button onclick="uploadPdf()">上传pdf</button>
-
+<button id="uploadBtn" onclick="uploadPdf()">上传pdf</button>
+<p id="tips" style="margin-left: 10px"></p>
 <script>
+    function afterClickUpload() {
+        document.getElementById('uploadBtn').setAttribute('disabled', 'true');
+        document.getElementById('tips').innerText = "服务处理中..."
+        document.getElementById('uploadBtn').style.backgroundColor = 'grey';
+        setTimeout(function () {
+            document.getElementById('uploadBtn').removeAttribute('disabled');
+            document.getElementById('tips').innerText = ""
+            document.getElementById('uploadBtn').style.backgroundColor = '#007bff';
+        }, 60000);
+    }
+
+    function afterDoneUpload() {
+        document.getElementById('uploadBtn').removeAttribute('disabled');
+        document.getElementById('tips').innerText = ""
+        document.getElementById('uploadBtn').style.backgroundColor = '#007bff';
+    }
+
     function uploadPdf() {
         var fileInput = document.getElementById('pdfFile');
         var file = fileInput.files[0];
         var formData = new FormData();
         formData.append('file', file);
 
+        afterClickUpload()
         var xhr = new XMLHttpRequest();
         xhr.open('POST', '/pdf2ImgV2', true);
         xhr.responseType = 'blob';
 
         xhr.onload = function () {
+            afterDoneUpload()
             if (this.status === 200) {
                 var filename = '';
                 var disposition = xhr.getResponseHeader('Content-Disposition');
@@ -69,6 +88,7 @@
                 };
                 reader.readAsText(this.response);
             }
+
         };
 
         xhr.send(formData);
