@@ -10,21 +10,24 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,7 +91,8 @@ public class JavaPdf2imgApplication {
 
             byte[] zipBytes = baos.toByteArray();
             HttpHeaders headers = new HttpHeaders();
-            headers.add("Content-Disposition", "attachment; filename=" + zipFilePath);
+            zipFilePath = zipFilePath.substring(zipFilePath.indexOf("_") + 1);
+            headers.add("Content-Disposition", "attachment; filename=pdf2img" + zipFilePath);
             return ResponseEntity.ok().headers(headers).body(zipBytes);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -192,7 +196,6 @@ public class JavaPdf2imgApplication {
         }
     }
 
-    public static ExecutorService executor = Executors.newFixedThreadPool(10);
 
     /**
      * PDF按页转成图片
@@ -220,7 +223,7 @@ public class JavaPdf2imgApplication {
 
             try (PDDocument document = Loader.loadPDF(file.getBytes())) {
                 PDFRenderer pdfRenderer = new PDFRenderer(document);
-
+                ExecutorService executor = Executors.newFixedThreadPool(10);
                 CountDownLatch latch = new CountDownLatch(document.getNumberOfPages());
                 for (int page = 0; page < document.getNumberOfPages(); ++page) {
                     BufferedImage bim = pdfRenderer.renderImage(page);
@@ -230,6 +233,7 @@ public class JavaPdf2imgApplication {
                 }
                 // 等待所有I/O任务完成
                 latch.await();
+                executor.shutdown();
 
                 log.info("转换后的图片保存在 -> " + destinationFile.getAbsolutePath());
                 return renderZip(destinationDir, zipFilePath);

@@ -43,6 +43,12 @@
             <artifactId>pdfbox</artifactId>
             <version>3.0.1</version>
         </dependency>
+        <!--        fix: Cannot read JBIG2 image: jbig2-imageio is not installed-->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>jbig2-imageio</artifactId>
+            <version>3.0.2</version>
+        </dependency>
 
     </dependencies>
 
